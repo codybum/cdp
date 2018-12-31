@@ -19,6 +19,7 @@ import org.wso2.siddhi.query.api.definition.Attribute;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CEPEngine {
 
@@ -31,14 +32,17 @@ public class CEPEngine {
     private Map<String,Schema> schemaMap;
     private Map<String,String> topicMap;
 
+    private AtomicBoolean lockSchema = new AtomicBoolean();
+    private AtomicBoolean lockTopic = new AtomicBoolean();
+
 
     public CEPEngine(PluginBuilder pluginBuilder) {
 
         this.plugin = pluginBuilder;
         logger = plugin.getLogger(CEPEngine.class.getName(),CLogger.Level.Info);
 
-        schemaMap = new ConcurrentHashMap<>();
-        topicMap = new ConcurrentHashMap<>();
+        schemaMap = Collections.synchronizedMap(new HashMap<>());
+        topicMap = Collections.synchronizedMap(new HashMap<>());
 
         // Creating Siddhi Manager
         siddhiManager = new SiddhiManager();
@@ -74,27 +78,38 @@ public class CEPEngine {
                 siddhiManager = new SiddhiManager();
             }
 
-            schemaMap.clear();
-            topicMap.clear();
+            synchronized (lockSchema) {
+                schemaMap.clear();
+            }
+
+            synchronized (lockTopic) {
+                topicMap.clear();
+            }
 
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    public void createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString) {
+    public void createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString, String outputListString) {
 
         try {
+
 
             String inputTopic = UUID.randomUUID().toString();
             String outputTopic = UUID.randomUUID().toString();
 
-            topicMap.put(inputStreamName,inputTopic);
-            topicMap.put(outputStreamName,outputTopic);
+            synchronized (lockTopic) {
+                topicMap.put(inputStreamName, inputTopic);
+                topicMap.put(outputStreamName, outputTopic);
+            }
 
             Schema.Parser parser = new Schema.Parser();
             Schema inputSchema = parser.parse(inputRecordSchemaString);
-            schemaMap.put(inputStreamName,inputSchema);
+
+            synchronized (lockSchema) {
+                schemaMap.put(inputStreamName, inputSchema);
+            }
 
             String sourceString = getSourceString(inputSchema, inputTopic, inputStreamName);
             String sinkString = getSinkString(outputTopic,outputStreamName,outputStreamAttributesString);
@@ -103,8 +118,12 @@ public class CEPEngine {
             siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(sourceString + " " + sinkString + " " + queryString);
 
             Schema outputSchema = getRecordSchema(outputStreamName);
-            schemaMap.put(outputStreamName,outputSchema);
-            InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(outputSchema,outputTopic,outputStreamName);
+
+            synchronized (lockSchema) {
+                schemaMap.put(outputStreamName, outputSchema);
+            }
+
+            InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(plugin,outputSchema,outputTopic,outputStreamName, outputListString);
 
             //subscribe to "inMemory" broker per topic
             InMemoryBroker.subscribe(subscriberTest);
@@ -121,88 +140,32 @@ public class CEPEngine {
     public void input(String streamName, String jsonPayload) {
         try {
 
-            if((schemaMap.containsKey(streamName)) && (topicMap.containsKey(streamName))) {
-                InMemoryBroker.publish(topicMap.get(streamName), getByteGenericDataRecordFromString(schemaMap.get(streamName),jsonPayload));
-
-            } else {
-                System.out.println("input error : no schema");
+            String topicName = null;
+            synchronized (lockTopic) {
+                if(topicMap.containsKey(streamName)) {
+                    topicName = topicMap.get(streamName);
+                }
             }
+
+            Schema schema = null;
+
+            synchronized (lockSchema) {
+                if(schemaMap.containsKey(streamName)) {
+                    schema = schemaMap.get(streamName);
+                }
+            }
+
+                if ((topicName != null) && (schema != null)) {
+                    InMemoryBroker.publish(topicName, getByteGenericDataRecordFromString(schema, jsonPayload));
+
+                } else {
+                    System.out.println("input error : no schema");
+                }
+
 
         } catch(Exception ex) {
             ex.printStackTrace();
         }
-    }
-
-    public void test() {
-
-
-        try {
-
-            Schema schema = ReflectData.get().getSchema(Ticker.class);
-
-            String inputStreamName = "UserStream";
-            String inputTopic = "user";
-
-            String outputStreamName = "BarStream";
-            String outputTopic = "user2";
-            String outputSchemaString = "source string, avgValue double";
-
-            String queryString = " " +
-                    //from TempStream#window.timeBatch(10 min)
-                    //"from UserStream#window.time(5 sec) " +
-                    "from UserStream#window.timeBatch(5 sec) " +
-                    "select source, avg(value) as avgValue " +
-                    "  group by source " +
-                    "insert into BarStream; ";
-
-            String sourceString = getSourceString(schema, inputTopic, inputStreamName);
-            String sinkString = getSinkString(outputTopic,outputStreamName,outputSchemaString);
-
-
-
-            //create during init;
-            // Creating Siddhi Manager
-            //siddhiManager = new SiddhiManager();
-
-            //Generating runtime
-            siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(sourceString + " " + sinkString + " " + queryString);
-
-            //Adding callback to retrieve output events from query
-            /*
-            siddhiAppRuntime.addCallback("UserStream", new StreamCallback() {
-
-                @Override
-                public void receive(Event[] events) {
-                    EventPrinter.print(events);
-                }
-            });
-            */
-
-            Schema outputSchema = getRecordSchema(outputStreamName);
-
-            InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(outputSchema,outputTopic,outputStreamName);
-
-            //subscribe to "inMemory" broker per topic
-            InMemoryBroker.subscribe(subscriberTest);
-
-
-            //Starting event processing
-            siddhiAppRuntime.start();
-
-            while(true) {
-            InMemoryBroker.publish("user", getBytePayload());
-            //Thread.sleep(1000);
-            }
-
-            //Shutting down the runtime
-            //siddhiAppRuntime.shutdown();
-
-            //Shutting down Siddhi
-            //siddhiManager.shutdown();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
     }
 
     public String getStringPayload() {
@@ -355,8 +318,10 @@ public class CEPEngine {
         Schema returnSchema = null;
         try {
 
-            if(schemaMap.containsKey(streamName)) {
-                returnSchema = schemaMap.get(streamName);
+            synchronized (lockSchema) {
+                if (schemaMap.containsKey(streamName)) {
+                    returnSchema = schemaMap.get(streamName);
+                }
             }
 
         } catch(Exception ex) {

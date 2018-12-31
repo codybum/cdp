@@ -26,6 +26,7 @@ public class ExecutorImpl implements Executor {
                 case "queryadd":
                     return addCEPQuery(incoming);
                 case "querydel":
+                    logger.info("Clearing Streams");
                     cep.clear();
                     incoming.setParam("iscleared",Boolean.TRUE.toString());
                     return incoming;
@@ -84,14 +85,16 @@ public class ExecutorImpl implements Executor {
 
     public MsgEvent addCEPQuery(MsgEvent incoming) {
 
-
-        System.out.println("ADD QUERY : " + incoming.getParams().toString());
+        logger.info("Adding Stream: " + incoming.getParam("output_stream_name"));
+        //System.out.println("ADD QUERY : " + incoming.getParams().toString());
         cep.createCEP(
-        incoming.getParam("input_schema"),
-        incoming.getParam("input_stream_name"),
-        incoming.getParam("output_stream_name"),
-        incoming.getParam("output_stream_attributes"),
-        incoming.getParam("query"));
+                incoming.getCompressedParam("input_schema"),
+                incoming.getParam("input_stream_name"),
+                incoming.getParam("output_stream_name"),
+                incoming.getParam("output_stream_attributes"),
+                incoming.getParam("query"),
+                incoming.getCompressedParam("output_list")
+                );
 
         //remove body
         incoming.removeParam("input_schema");
@@ -99,6 +102,7 @@ public class ExecutorImpl implements Executor {
         //incoming.removeParam("output_stream_name");
         incoming.removeParam("output_stream_attributes");
         incoming.removeParam("query");
+        incoming.removeParam("output_list");
 
         incoming.setParam("output_schema",cep.getSchema(incoming.getParam("output_stream_name")).toString());
 
@@ -106,9 +110,11 @@ public class ExecutorImpl implements Executor {
     }
 
     public void queryInput(MsgEvent incoming) {
-        System.out.println("INCOMING: " + incoming.getParams().toString());
+
+        logger.info("Incoming Stream: " + incoming.getParam("input_stream_name"));
+        //System.out.println("INCOMING: " + incoming.getParams().toString());
         //cep.input(incoming.getParam("input_stream_name"), cep.getStringPayload());
-        cep.input(incoming.getParam("input_stream_name"), incoming.getParam("input_stream_payload"));
+        cep.input(incoming.getParam("input_stream_name"), incoming.getCompressedParam("input_stream_payload"));
 
 
     }
