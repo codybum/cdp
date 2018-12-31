@@ -25,6 +25,10 @@ public class ExecutorImpl implements Executor {
             switch (incoming.getParam("action")) {
                 case "queryadd":
                     return addCEPQuery(incoming);
+                case "querydel":
+                    cep.clear();
+                    incoming.setParam("iscleared",Boolean.TRUE.toString());
+                    return incoming;
 
                 default:
                     logger.error("Unknown configtype found: {} {}", incoming.getParam("action"), incoming.getMsgType());

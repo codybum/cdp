@@ -62,6 +62,26 @@ public class CEPEngine {
         }
     }
 
+    public void clear() {
+        try {
+
+            if(siddhiAppRuntime != null) {
+                siddhiAppRuntime.shutdown();
+                siddhiAppRuntime = null;
+            }
+
+            /*
+            if(siddhiManager != null) {
+                siddhiManager.shutdown();
+
+            }
+            */
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
     public void createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString) {
 
         try {
