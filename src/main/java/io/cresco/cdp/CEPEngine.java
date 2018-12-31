@@ -27,7 +27,7 @@ public class CEPEngine {
 
     private SiddhiManager siddhiManager;
     private SiddhiAppRuntime siddhiAppRuntime;
-    private Schema.Parser parser;
+
     private Map<String,Schema> schemaMap;
     private Map<String,String> topicMap;
 
@@ -40,7 +40,6 @@ public class CEPEngine {
         schemaMap = new ConcurrentHashMap<>();
         topicMap = new ConcurrentHashMap<>();
 
-        parser = new Schema.Parser();
         // Creating Siddhi Manager
         siddhiManager = new SiddhiManager();
 
@@ -70,12 +69,13 @@ public class CEPEngine {
                 siddhiAppRuntime = null;
             }
 
-            /*
             if(siddhiManager != null) {
                 siddhiManager.shutdown();
-
+                siddhiManager = new SiddhiManager();
             }
-            */
+
+            schemaMap.clear();
+            topicMap.clear();
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -92,6 +92,7 @@ public class CEPEngine {
             topicMap.put(inputStreamName,inputTopic);
             topicMap.put(outputStreamName,outputTopic);
 
+            Schema.Parser parser = new Schema.Parser();
             Schema inputSchema = parser.parse(inputRecordSchemaString);
             schemaMap.put(inputStreamName,inputSchema);
 
@@ -302,6 +303,7 @@ public class CEPEngine {
         byte[] bytes = null;
         try{
 
+            Schema.Parser parser = new Schema.Parser();
             Schema schema = parser.parse(schemaString);
 
             Decoder decoder = new DecoderFactory().jsonDecoder(schema, jsonInputPayload);

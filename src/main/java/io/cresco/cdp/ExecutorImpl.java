@@ -100,11 +100,7 @@ public class ExecutorImpl implements Executor {
         incoming.removeParam("output_stream_attributes");
         incoming.removeParam("query");
 
-        System.out.println("ADD QUERY RETURN 2");
-
         incoming.setParam("output_schema",cep.getSchema(incoming.getParam("output_stream_name")).toString());
-
-        System.out.println("ADD QUERY RETURN 1");
 
         return incoming;
     }
