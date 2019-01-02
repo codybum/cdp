@@ -156,7 +156,9 @@ public class CEPEngine {
             }
 
                 if ((topicName != null) && (schema != null)) {
+                //start measurement
                     InMemoryBroker.publish(topicName, getByteGenericDataRecordFromString(schema, jsonPayload));
+
 
                 } else {
                     System.out.println("input error : no schema");
