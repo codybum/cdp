@@ -92,8 +92,7 @@ public class ExecutorImpl implements Executor {
                 incoming.getParam("input_stream_name"),
                 incoming.getParam("output_stream_name"),
                 incoming.getParam("output_stream_attributes"),
-                incoming.getParam("query"),
-                incoming.getCompressedParam("output_list")
+                incoming.getParam("query")
                 );
 
         //remove body
@@ -104,7 +103,7 @@ public class ExecutorImpl implements Executor {
         incoming.removeParam("query");
         incoming.removeParam("output_list");
 
-        incoming.setParam("output_schema",cep.getSchema(incoming.getParam("output_stream_name")).toString());
+        //incoming.setParam("output_schema",cep.getSchema(incoming.getParam("output_stream_name")).toString());
 
         return incoming;
     }
@@ -114,7 +113,7 @@ public class ExecutorImpl implements Executor {
         logger.info("Incoming Stream: " + incoming.getParam("input_stream_name"));
         //System.out.println("INCOMING: " + incoming.getParams().toString());
         //cep.input(incoming.getParam("input_stream_name"), cep.getStringPayload());
-        cep.input(incoming.getParam("input_stream_name"), incoming.getCompressedParam("input_stream_payload"));
+        cep.input("cdp",incoming.getParam("input_stream_name"), incoming.getCompressedParam("input_stream_payload"));
 
 
     }

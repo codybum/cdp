@@ -1,6 +1,8 @@
 package io.cresco.cdp;
 
-import io.cresco.library.data.TopicType;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
+import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 import org.apache.avro.Schema;
@@ -10,11 +12,12 @@ import org.apache.avro.io.*;
 import org.apache.avro.reflect.ReflectDatumWriter;
 import org.wso2.siddhi.core.util.transport.InMemoryBroker;
 
-import javax.jms.TextMessage;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 
-public class OutputSubscriber implements InMemoryBroker.Subscriber {
+public class OutputSubscriberOld implements InMemoryBroker.Subscriber {
 
     private PluginBuilder plugin;
     private CLogger logger;
@@ -24,19 +27,23 @@ public class OutputSubscriber implements InMemoryBroker.Subscriber {
     private String streamName;
     private DatumReader<GenericData.Record> reader;
 
-    private String cepId;
 
 
-    public OutputSubscriber(PluginBuilder pluginBuilder, String cepId, Schema schema, String topic, String streamName) {
+    private List<Map<String,String>> outputList;
+    //private String outputRegion;
+    //private String outputAgent;
+    //private String outputPlugin;
+
+    public OutputSubscriberOld(PluginBuilder pluginBuilder, Schema schema, String topic, String streamName, String outputListString) {
         this.plugin = pluginBuilder;
-        logger = plugin.getLogger(OutputSubscriber.class.getName(),CLogger.Level.Info);
-
-        this.cepId = cepId;
+        logger = plugin.getLogger(OutputSubscriberOld.class.getName(),CLogger.Level.Info);
 
         this.schema = schema;
         this.topic = topic;
         this.streamName = streamName;
 
+        this.outputList = new Gson().fromJson(outputListString,new TypeToken<List<Map<String, String>>>() {
+            }.getType());
 
         reader = new GenericDatumReader<>(schema);
     }
@@ -59,13 +66,8 @@ public class OutputSubscriber implements InMemoryBroker.Subscriber {
            // System.out.println("Original Object Schema JSON: " + schema);
            // System.out.println("Original Object DATA JSON: "+ input);
 
+            logger.info("CDP Output " + input);
 
-            TextMessage tm = plugin.getAgentService().getDataPlaneService().createTextMessage();
-            tm.setText(input);
-            tm.setStringProperty("cep_id",cepId);
-            plugin.getAgentService().getDataPlaneService().sendMessage(TopicType.AGENT,tm);
-
-            /*
             if(!outputList.isEmpty()) {
 
                 for(Map<String,String> outputMap : outputList) {
@@ -84,7 +86,6 @@ public class OutputSubscriber implements InMemoryBroker.Subscriber {
                 }
 
             }
-            */
 
 
         } catch(Exception ex) {

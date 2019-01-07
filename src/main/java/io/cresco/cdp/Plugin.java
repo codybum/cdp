@@ -2,6 +2,7 @@ package io.cresco.cdp;
 
 
 import io.cresco.library.agent.AgentService;
+import io.cresco.library.data.TopicType;
 import io.cresco.library.messaging.MsgEvent;
 import io.cresco.library.plugin.Executor;
 import io.cresco.library.plugin.PluginBuilder;
@@ -10,6 +11,10 @@ import io.cresco.library.utilities.CLogger;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.*;
 
+import javax.jms.MapMessage;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+import javax.jms.TextMessage;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Map;
@@ -82,6 +87,43 @@ public class Plugin implements PluginService {
                 logger.info("Plugin " + pluginBuilder.getPluginID() + " waiting on Agent Init");
                 Thread.sleep(1000);
             }
+
+
+
+            MessageListener ml = new MessageListener() {
+                public void onMessage(Message msg) {
+                    try {
+
+
+                        if (msg instanceof TextMessage) {
+
+                            //System.out.println(RXQueueName + " msg:" + ((TextMessage) msg).getText());
+                            String message = ((TextMessage) msg).getText();
+                            logger.error("YES!!! " + message);
+
+                        }
+                    } catch(Exception ex) {
+
+                        ex.printStackTrace();
+                    }
+                }
+            };
+            pluginBuilder.getAgentService().getDataPlaneService().addMessageListener(TopicType.AGENT,ml,null);
+
+            TextMessage tm = pluginBuilder.getAgentService().getDataPlaneService().createTextMessage();
+            tm.setText("DID IT WORK?");
+
+            MapMessage mapMessage = pluginBuilder.getAgentService().getDataPlaneService().createMapMessage();
+
+            pluginBuilder.getAgentService().getDataPlaneService().sendMessage(TopicType.AGENT,tm);
+
+            //pluginBuilder.getAgentService().
+
+
+            //pluginBuilder.getAgentService().getDataPlaneService().
+            //releaseYear
+            //TextMessage tm = sess.createTextMessage(message);
+            //tm.setIntProperty("releaseYear",1977);
 
             /*
             MessageSender messageSender = new MessageSender(pluginBuilder);
