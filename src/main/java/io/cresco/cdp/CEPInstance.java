@@ -1,5 +1,6 @@
 package io.cresco.cdp;
 
+import io.cresco.library.data.TopicType;
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 import org.apache.avro.Schema;
@@ -16,6 +17,9 @@ import org.wso2.siddhi.core.stream.output.sink.Sink;
 import org.wso2.siddhi.core.util.transport.InMemoryBroker;
 import org.wso2.siddhi.query.api.definition.Attribute;
 
+import javax.jms.Message;
+import javax.jms.MessageListener;
+import javax.jms.TextMessage;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -79,6 +83,30 @@ public class CEPInstance {
             synchronized (lockSchema) {
                 schemaMap.put(outputStreamName, outputSchema);
             }
+
+
+            MessageListener ml = new MessageListener() {
+                public void onMessage(Message msg) {
+                    try {
+
+
+                        if (msg instanceof TextMessage) {
+
+                            //System.out.println(RXQueueName + " msg:" + ((TextMessage) msg).getText());
+                            InMemoryBroker.publish(inputTopic, getByteGenericDataRecordFromString(inputRecordSchemaString, ((TextMessage) msg).getText()));
+                            //String message = ((TextMessage) msg).getText();
+                            //logger.error("YES!!! " + message);
+
+                        }
+                    } catch(Exception ex) {
+
+                        ex.printStackTrace();
+                    }
+                }
+            };
+
+            pluginBuilder.getAgentService().getDataPlaneService().addMessageListener(TopicType.AGENT,ml,"stream_name='" + inputStreamName + "'");
+
 
             InMemoryBroker.Subscriber subscriberTest = new OutputSubscriber(plugin,cepId,outputSchema,outputTopic,outputStreamName);
 
@@ -162,8 +190,6 @@ public class CEPInstance {
                 if ((topicName != null) && (schema != null)) {
                 //start measurement
                     InMemoryBroker.publish(topicName, getByteGenericDataRecordFromString(schema, jsonPayload));
-
-
                 } else {
                     System.out.println("input error : no schema");
                 }

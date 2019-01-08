@@ -60,10 +60,14 @@ public class OutputSubscriber implements InMemoryBroker.Subscriber {
            // System.out.println("Original Object DATA JSON: "+ input);
 
 
+            logger.error(input);
             TextMessage tm = plugin.getAgentService().getDataPlaneService().createTextMessage();
             tm.setText(input);
-            tm.setStringProperty("cep_id",cepId);
+            tm.setStringProperty("stream_name",streamName);
             plugin.getAgentService().getDataPlaneService().sendMessage(TopicType.AGENT,tm);
+
+
+
 
             /*
             if(!outputList.isEmpty()) {

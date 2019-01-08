@@ -108,6 +108,8 @@ public class Plugin implements PluginService {
                     }
                 }
             };
+
+            /*
             pluginBuilder.getAgentService().getDataPlaneService().addMessageListener(TopicType.AGENT,ml,null);
 
             TextMessage tm = pluginBuilder.getAgentService().getDataPlaneService().createTextMessage();
@@ -116,6 +118,7 @@ public class Plugin implements PluginService {
             MapMessage mapMessage = pluginBuilder.getAgentService().getDataPlaneService().createMapMessage();
 
             pluginBuilder.getAgentService().getDataPlaneService().sendMessage(TopicType.AGENT,tm);
+*/
 
             //pluginBuilder.getAgentService().
 

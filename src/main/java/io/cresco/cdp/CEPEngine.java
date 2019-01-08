@@ -41,6 +41,20 @@ public class CEPEngine {
 
     }
 
+    public CEPInstance getCEPInstance(String cepId) {
+        CEPInstance cepInstance = null;
+        try {
+            synchronized (lockCEP) {
+                if(cepMap.containsKey(cepId)) {
+                    cepInstance = cepMap.get(cepId);
+                }
+            }
+        } catch (Exception ex) {
+            logger.error(ex.getMessage());
+        }
+        return cepInstance;
+    }
+
     public boolean removeCEP(String cepId) {
         boolean isRemoved = false;
         synchronized (lockCEP) {
@@ -94,30 +108,50 @@ public class CEPEngine {
         }
     }
 
+    /*
     public String createCEP(String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString) {
 
         String cepId = null;
         try {
             cepId = UUID.randomUUID().toString();
+            if(!createCEP(cepId,inputRecordSchemaString,inputStreamName,outputStreamName,outputStreamAttributesString,queryString)) {
+                cepId = null;
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            cepId = null;
+        }
+        return cepId;
+    }
+    */
+        public boolean createCEP(String cepId, String inputRecordSchemaString, String inputStreamName, String outputStreamName, String outputStreamAttributesString,String queryString) {
+
+        boolean isCreated = false;
+        try {
 
             CEPInstance cepInstance = new CEPInstance(plugin,siddhiManager,cepId,inputRecordSchemaString,inputStreamName,outputStreamName,outputStreamAttributesString,queryString);
 
             synchronized (lockCEP) {
                 cepMap.put(cepId,cepInstance);
             }
+            isCreated = true;
 
             } catch (Exception ex) {
             ex.printStackTrace();
-            cepId = null;
         }
-        return cepId;
+        return isCreated;
     }
 
     public void input(String cepId, String streamName, String jsonPayload) {
         try {
 
             synchronized (lockCEP) {
-                cepMap.get(cepId).input(streamName,jsonPayload);
+                if(cepMap.containsKey(cepId)) {
+                    cepMap.get(cepId).input(streamName, jsonPayload);
+                } else {
+                    logger.error("cepId: " + cepId + " does not exist!");
+                }
             }
 
 

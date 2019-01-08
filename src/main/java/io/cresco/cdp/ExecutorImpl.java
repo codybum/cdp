@@ -5,6 +5,8 @@ import io.cresco.library.plugin.Executor;
 import io.cresco.library.plugin.PluginBuilder;
 import io.cresco.library.utilities.CLogger;
 
+import java.util.UUID;
+
 public class ExecutorImpl implements Executor {
 
     private PluginBuilder plugin;
@@ -87,13 +89,26 @@ public class ExecutorImpl implements Executor {
 
         logger.info("Adding Stream: " + incoming.getParam("output_stream_name"));
         //System.out.println("ADD QUERY : " + incoming.getParams().toString());
-        cep.createCEP(
+
+        String cepId = null;
+
+        if(incoming.getParam("query_id") == null) {
+            cepId = UUID.randomUUID().toString();
+            logger.info("cepId:" + incoming.getParam("query_id") + " generated");
+        } else {
+            cepId = incoming.getParam("query_id");
+            logger.info("cepId:" + incoming.getParam("query_id") + " provided");
+        }
+
+        cep.createCEP(cepId,
                 incoming.getCompressedParam("input_schema"),
                 incoming.getParam("input_stream_name"),
                 incoming.getParam("output_stream_name"),
                 incoming.getParam("output_stream_attributes"),
                 incoming.getParam("query")
-                );
+        );
+
+        incoming.setParam("query_id",cepId);
 
         //remove body
         incoming.removeParam("input_schema");
@@ -102,18 +117,17 @@ public class ExecutorImpl implements Executor {
         incoming.removeParam("output_stream_attributes");
         incoming.removeParam("query");
         incoming.removeParam("output_list");
-
-        //incoming.setParam("output_schema",cep.getSchema(incoming.getParam("output_stream_name")).toString());
+        incoming.setParam("output_schema", cep.getCEPInstance(cepId).getSchema(incoming.getParam("output_stream_name")).toString());
 
         return incoming;
     }
 
     public void queryInput(MsgEvent incoming) {
 
-        logger.info("Incoming Stream: " + incoming.getParam("input_stream_name"));
+        logger.info("Incoming Stream: " + incoming.getParam("input_stream_name") + " cepId: " + incoming.getParam("query_id"));
         //System.out.println("INCOMING: " + incoming.getParams().toString());
         //cep.input(incoming.getParam("input_stream_name"), cep.getStringPayload());
-        cep.input("cdp",incoming.getParam("input_stream_name"), incoming.getCompressedParam("input_stream_payload"));
+        cep.input(incoming.getParam("query_id"),incoming.getParam("input_stream_name"), incoming.getCompressedParam("input_stream_payload"));
 
 
     }
